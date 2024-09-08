@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+
+{% block title %}Home Page{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid mt-5">
+    <!-- Main Title -->
+    <div class="text-center mb-4">
+        <h1 class="display-4">Welcome to SOCKG Dashboard</h1>
+    </div>
+
+    <!-- Two-column layout for text and graph -->
+    <div class="row d-flex align-items-center h-100">
+        <!-- Left Column: Information Section -->
+        <div class="col-md-6 mb-4">
+            <h2>What is SOCKG?</h2>
+            <p class="text-justify">
+                SOCKG is a project that aims to construct a Soil Organic Carbon Knowledge Graph (SOCKG) to address the
+                demand for accurate soil carbon data.
+            </p>
+
+            <h2>Why is it important?</h2>
+            <p class="text-justify">
+                Accurate soil carbon data is essential for quantifying carbon credits and encouraging sustainable
+                farming practices that mitigate greenhouse gas emissions. The developed knowledge graph will support
+                better policy decisions, enhanced carbon valuation accuracy, risk reduction, and increased financial
+                gains from soil carbon management and participation in carbon markets.
+            </p>
+
+            <h2>Who is involved?</h2>
+            <p class="text-justify">
+                The collaboration between the University of Texas at Arlington (UTA) and the USDA Agricultural Research
+                Service (ARS) includes UTA leading technical development with their expertise in data management, data
+                science, and semantic technologies, while the USDA-ARS provides domain knowledge and strategic guidance
+                to ensure real-world applicability and policy impact.
+            </p>
+
+            <h2>Who can use it?</h2>
+            <p class="text-justify">
+                SOCKG equips policymakers, land administrators, environmental NGOs, advocacy groups, educators, and
+                realtors with precise data and insights on soil carbon stocks, fluxes, and dynamics, enabling them to
+                make informed decisions regarding climate change mitigation, policy formulation, land use planning,
+                educational teaching, and real estate development.
+            </p>
+        </div>
+
+        <!-- Right Column: Graph Section -->
+        <div class="col-md-6">
+            <h2 align="center">Knowledge Graph Schema</h2>
+            <div id="mynetwork" style="width: 100%; height: 600px; border: 1px solid lightgray;"></div>
+
+            <div class="mt-4">
+                <h5 id="node-type" class="font-weight-bold">Node Type: double click on any node to view its attributes
+                </h5>
+
+                <!-- Table for Node Attributes -->
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Attribute</th>
+                            <th>Type</th>
+                            <th>Link</th>
+                        </tr>
+                    </thead>
+                    <tbody id="node-attributes">
+                        <tr>
+                            <td colspan="3" class="text-center">No node selected</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom script built on top of vis.js library -->
+<script type="text/javascript">
+
+    // Initialize the network and allNodes variables
+    var network;
+    var allNodes;
+    var highlightActive = false;
+    var attributes = [];
+
+    // Get the nodes and edges data from Flask (passed from the view)
+    var nodesDataset = new vis.DataSet({{ node_list | tojson | safe }});
+    var edgesDataset = new vis.DataSet({{ edge_list | tojson | safe }});
+
+    function redrawAll() {
+        var container = document.getElementById("mynetwork");
+        var options = {
+            nodes: {
+                shape: "dot",
+                scaling: {
+                    min: 10,
+                    max: 30,
+                },
+                font: {
+                    size: 12,
+                    face: "Tahoma",
+                },
+            },
+            edges: {
+                width: 0.15,
+                color: { inherit: "from" },
+                smooth: {
+                    type: "continuous",
+                },
+            },
+            "physics": {
+                "barnesHut": {
+                    "gravitationalConstant": -7000,
+                    "centralGravity": 0,
+                    "springLength": 120,
+                },
+                "minVelocity": 0.75
+            },
+            interaction: {
+                tooltipDelay: 200,
+                hideEdgesOnDrag: true,
+                hideEdgesOnZoom: true,
+                hover: true,
+            },
+        };
+        var data = { nodes: nodesDataset, edges: edgesDataset };
+        network = new vis.Network(container, data, options);
+
+
+        // Set the cursor to a pointer
+        var networkCanvas = document
+            .getElementById("mynetwork")
+            .getElementsByTagName("canvas")[0];
+        networkCanvas.style.cursor = "default";
+
+        function changeCursor(newCursorStyle) {
+            networkCanvas.style.cursor = newCursorStyle;
+        }
+
+        // Change the cursor on events
+        network.on("hoverNode", function () {
+            changeCursor("grab");
+        });
+        network.on("blurNode", function () {
+            changeCursor("default");
+        });
+        network.on("hoverEdge", function () {
+            changeCursor("grab");
+        });
+        network.on("blurEdge", function () {
+            changeCursor("default");
+        });
+        network.on("dragStart", function () {
+            changeCursor("grabbing");
+        });
+        network.on("dragging", function () {
+            changeCursor("grabbing");
+        });
+        network.on("dragEnd", function () {
+            changeCursor("grab");
+        });
+
+        // get a JSON object
+        allNodes = nodesDataset.get({ returnType: "Object" });
+        network.on("click", neighbourhoodHighlight);
+        network.on("doubleClick", function (params) {
+            // Ensure the node was clicked
+            if (params.nodes.length > 0) {
+                const nodeId = params.nodes[0]; // Get the node ID
+
+                // Update Node Type
+                document.getElementById("node-type").innerText = "Node Type: " + nodeId;
+
+                // Fetch the node attributes from the server using an AJAX call
+                fetch(`/get_node_attributes/${nodeId}`)
+                    .then(response => response.json())
+                    .then(data => {
+
+                        // Format the attributes as table rows
+                        let rows = "";
+                        console.log(data);
+                        // Loop through the attributes list
+                        for (let i = 0; i < data.length; i++) {
+                            rows += `<tr>
+                                <td>${data[i].name}</td>
+                                <td>${data[i].data_type}</td>
+                                <td><a href="${data[i].reference_link}" target="_blank">Link</a></td>
+                            </tr>`;
+                        }
+
+                        document.getElementById("node-attributes").innerHTML = rows;
+                    })
+                    .catch(error => console.error('Error fetching node attributes:', error));
+            }
+        });
+    }
+
+    function neighbourhoodHighlight(params) {
+        // if something is selected:
+        if (params.nodes.length > 0) {
+
+            highlightActive = true;
+            var i, j;
+            var selectedNode = params.nodes[0];
+            var degrees = 2;
+
+            // mark all nodes as hard to read.
+            for (var nodeId in allNodes) {
+                allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+                if (allNodes[nodeId].hiddenLabel === undefined) {
+                    allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+                    allNodes[nodeId].label = undefined;
+                }
+            }
+            var connectedNodes = network.getConnectedNodes(selectedNode);
+            var allConnectedNodes = [];
+
+            // get the second degree nodes
+            for (i = 1; i < degrees; i++) {
+                for (j = 0; j < connectedNodes.length; j++) {
+                    allConnectedNodes = allConnectedNodes.concat(
+                        network.getConnectedNodes(connectedNodes[j])
+                    );
+                }
+            }
+
+            // all second degree nodes get a different color and their label back
+            for (i = 0; i < allConnectedNodes.length; i++) {
+                allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+                if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+                    allNodes[allConnectedNodes[i]].label =
+                        allNodes[allConnectedNodes[i]].hiddenLabel;
+                    allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+                }
+            }
+
+            // all first degree nodes get their own color and their label back
+            for (i = 0; i < connectedNodes.length; i++) {
+                allNodes[connectedNodes[i]].color = undefined;
+                if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+                    allNodes[connectedNodes[i]].label =
+                        allNodes[connectedNodes[i]].hiddenLabel;
+                    allNodes[connectedNodes[i]].hiddenLabel = undefined;
+                }
+            }
+
+            // the main node gets its own color and its label back.
+            allNodes[selectedNode].color = undefined;
+            if (allNodes[selectedNode].hiddenLabel !== undefined) {
+                allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+                allNodes[selectedNode].hiddenLabel = undefined;
+            }
+        } else if (highlightActive === true) {
+            // reset all nodes
+            for (var nodeId in allNodes) {
+                allNodes[nodeId].color = undefined;
+                if (allNodes[nodeId].hiddenLabel !== undefined) {
+                    allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+                    allNodes[nodeId].hiddenLabel = undefined;
+                }
+            }
+            highlightActive = false;
+        }
+
+        // transform the object into an array
+        var updateArray = [];
+        for (nodeId in allNodes) {
+            if (allNodes.hasOwnProperty(nodeId)) {
+                updateArray.push(allNodes[nodeId]);
+            }
+        }
+        nodesDataset.update(updateArray);
+    }
+    redrawAll();
+</script>
+{% endblock %}
