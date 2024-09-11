@@ -1,5 +1,5 @@
 from SPARQLWrapper import SPARQLWrapper, JSON
-import collections, random
+import collections
 
 # SOCKG knowledge graph class
 class SOCKG:
@@ -80,7 +80,7 @@ class SOCKG:
         
         attributes = []
         if node not in self.get_nodes():
-            print("Node not found in ontology graph")
+            print("Node type (Class) not found in the ontology graph")
         else:
             node_uri = "http://www.semanticweb.org/zzy/ontologies/2024/0/soil-carbon-ontology/" + node
             
@@ -102,8 +102,6 @@ class SOCKG:
                     ?attri rdfs:seeAlso ?reference_link
                 }}
             """.format(node_uri=node_uri)
-            
-            print(get_attributes_query)
 
             # Run the query
             try:
@@ -123,6 +121,7 @@ class SOCKG:
                 print(f"Error retrieving attributes for node {node}: {e}")
         return attributes
 
+    # Return visJs compatible format graph
     def getVisJsGraph(self):
         
         nodes, edges = [], []
@@ -138,6 +137,39 @@ class SOCKG:
                     seen_nodes.add(end_node)
                 edges.append({"from": start_node, "to": end_node, "title": relation, "arrows": "to"})
         return {"nodes": nodes, "edges": edges}
+    
+    # Given a node type, return all node instance belong to that type
+    def get_node_instance(self, node_type):
+        
+        instances_uri = []
+        if node_type not in self.get_nodes():
+            print("Node type (Class) not found in the ontology graph")
+        else:
+            
+            get_attributes_query = """
+                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+                PREFIX onto: <http://www.semanticweb.org/zzy/ontologies/2024/0/soil-carbon-ontology/>
+
+                SELECT ?instance_uri
+                WHERE {{
+                ?instance_uri rdf:type onto:{node_type} .
+                }}
+            """.format(node_type=node_type)
+
+            # Run the query
+            try:
+                self.sparql.setQuery(get_attributes_query)
+                results = self.sparql.queryAndConvert()
+                
+                # A list of tuples containing the attribute name, data type, and reference link
+                for result in results["results"]["bindings"]:
+                    uri = result["instance_uri"]["value"]
+                    instances_uri.append(uri)
+            except Exception as e:
+                print(f"Error retrieving attributes for node {node_type}: {e}")
+        return instances_uri
+
+
 
 
     

@@ -3,80 +3,37 @@
 {% block title %}Home Page{% endblock %}
 
 {% block content %}
+<!-- Container for graph and table -->
+<div style="display: flex; height: 100vh;">
 
-<div class="container-fluid mt-5">
-    <!-- Main Title -->
-    <div class="text-center mb-4">
-        <h1 class="display-4">Welcome to SOCKG Dashboard</h1>
+    <!-- Graph container -->
+    <div id="mynetwork" style="flex-grow: 1; border: 1px solid lightgray;"></div>
+
+    <!-- Table container on the right -->
+    <div style="width: 25%; padding: 10px;">
+        <h5 id="node-type" class="font-weight-bold">Node Type: double click on any node to view its attributes</h5>
+
+        <!-- Table for Node Attributes -->
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Attribute</th>
+                    <th>Type</th>
+                    <th>Link</th>
+                </tr>
+            </thead>
+            <tbody id="node-attributes">
+                <tr>
+                    <td colspan="3" class="text-center">No node selected</td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 
-    <!-- Two-column layout for text and graph -->
-    <div class="row d-flex align-items-center h-100">
-        <!-- Left Column: Information Section -->
-        <div class="col-md-6 mb-4">
-            <h2>What is SOCKG?</h2>
-            <p class="text-justify">
-                SOCKG is a project that aims to construct a Soil Organic Carbon Knowledge Graph (SOCKG) to address the
-                demand for accurate soil carbon data.
-            </p>
-
-            <h2>Why is it important?</h2>
-            <p class="text-justify">
-                Accurate soil carbon data is essential for quantifying carbon credits and encouraging sustainable
-                farming practices that mitigate greenhouse gas emissions. The developed knowledge graph will support
-                better policy decisions, enhanced carbon valuation accuracy, risk reduction, and increased financial
-                gains from soil carbon management and participation in carbon markets.
-            </p>
-
-            <h2>Who is involved?</h2>
-            <p class="text-justify">
-                The collaboration between the University of Texas at Arlington (UTA) and the USDA Agricultural Research
-                Service (ARS) includes UTA leading technical development with their expertise in data management, data
-                science, and semantic technologies, while the USDA-ARS provides domain knowledge and strategic guidance
-                to ensure real-world applicability and policy impact.
-            </p>
-
-            <h2>Who can use it?</h2>
-            <p class="text-justify">
-                SOCKG equips policymakers, land administrators, environmental NGOs, advocacy groups, educators, and
-                realtors with precise data and insights on soil carbon stocks, fluxes, and dynamics, enabling them to
-                make informed decisions regarding climate change mitigation, policy formulation, land use planning,
-                educational teaching, and real estate development.
-            </p>
-        </div>
-
-        <!-- Right Column: Graph Section -->
-        <div class="col-md-6">
-            <h2 align="center">Knowledge Graph Schema</h2>
-            <div id="mynetwork" style="width: 100%; height: 600px; border: 1px solid lightgray;"></div>
-
-            <div class="mt-4">
-                <h5 id="node-type" class="font-weight-bold">Node Type: double click on any node to view its attributes
-                </h5>
-
-                <!-- Table for Node Attributes -->
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Attribute</th>
-                            <th>Type</th>
-                            <th>Link</th>
-                        </tr>
-                    </thead>
-                    <tbody id="node-attributes">
-                        <tr>
-                            <td colspan="3" class="text-center">No node selected</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
 </div>
 
 <!-- Custom script built on top of vis.js library -->
 <script type="text/javascript">
-
     // Initialize the network and allNodes variables
     var network;
     var allNodes;
@@ -125,7 +82,6 @@
         };
         var data = { nodes: nodesDataset, edges: edgesDataset };
         network = new vis.Network(container, data, options);
-
 
         // Set the cursor to a pointer
         var networkCanvas = document
