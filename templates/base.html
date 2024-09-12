@@ -48,6 +48,62 @@
             font-weight: bold;
             color: white;
         }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        .checkbox-column {
+            width: 40px;
+        }
+
+        .action-column {
+            width: 100px;
+        }
+
+        .expand-button {
+            cursor: pointer;
+            padding: 5px;
+            background-color: #f1f1f1;
+            border: none;
+        }
+
+        .expand-button:after {
+            content: '▼';
+            display: inline-block;
+        }
+
+        .expanded .expand-button:after {
+            content: '▲';
+        }
+
+        .details-row {
+            display: none;
+        }
+
+        .expanded .details-row {
+            display: table-row;
+        }
+
+        button.import-btn {
+            background-color: #3b8de3;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
     </style>
 </head>
 

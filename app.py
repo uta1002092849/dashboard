@@ -30,6 +30,11 @@ def get_node_attributes_route(node_id):
     attributes = sockg.get_node_attributes(node_id)
     return (attributes)
 
+@app.route('/get_node_instances/<node_type>', methods=['GET'])
+def get_node_instance_route(node_type):
+    sockg = SOCKG(SPARQL_ENDPOINT)
+    instances = sockg.get_node_instance(node_type)
+    return (instances)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000, debug=True)

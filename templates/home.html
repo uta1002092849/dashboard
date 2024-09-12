@@ -9,31 +9,149 @@
     <!-- Graph container -->
     <div id="mynetwork" style="flex-grow: 1; border: 1px solid lightgray;"></div>
 
-    <!-- Table container on the right -->
-    <div style="width: 25%; padding: 10px;">
-        <h5 id="node-type" class="font-weight-bold">Node Type: double click on any node to view its attributes</h5>
 
-        <!-- Table for Node Attributes -->
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>Attribute</th>
-                    <th>Type</th>
-                    <th>Link</th>
-                </tr>
-            </thead>
-            <tbody id="node-attributes">
-                <tr>
-                    <td colspan="3" class="text-center">No node selected</td>
-                </tr>
-            </tbody>
-        </table>
+    <div class="popup">
+        <div class="popup-header">
+            <h2>Search Nodes</h2>
+            <button class="close-button">&times;</button>
+        </div>
+        <div class="input-group">
+            <select id="label-select">
+                <option value="">Select label</option>
+                <!-- Options will be added dynamically -->
+            </select>
+            <select id="property-select">
+                <option value="">Select property</option>
+                <!-- Options will be added dynamically -->
+            </select>
+        </div>
+        <div class="popup-content">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="checkbox-column"><input type="checkbox" id="select-all"></th>
+                        <th>Labels</th>
+                        <th>name</th>
+                        <th class="action-column">Actions</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <!-- Rows will be dynamically added here -->
+                </tbody>
+            </table>
+        </div>
     </div>
+
 
 </div>
 
 <!-- Custom script built on top of vis.js library -->
 <script type="text/javascript">
+
+
+    var labels = {{ node_list | tojson | safe }}.map(node => node.label);
+
+    // async function to get the properties of a label
+    async function getDataProperties(label) {
+        try {
+            var response = await fetch(`/get_node_attributes/${label}`);
+            var data = await response.json();
+
+            var dataProperty = [];
+            // Loop through the properties list
+            for (let i = 0; i < data.length; i++) {
+                let name = data[i].name;
+                let dataType = data[i].data_type;
+                let referenceLink = data[i].reference_link;
+                dataProperty.push({ name, dataType, referenceLink });
+            }
+            return dataProperty;
+        } catch (error) {
+            console.error('Error fetching label properties:', error);
+            return [];
+        }
+    }
+
+    // async function to get the nodes instance of a label
+    async function getNodesInstances(label) {
+        try {
+            var response = await fetch(`/get_node_instances/${label}`);
+            var data = await response.json();
+
+            var nodesInstances = [];
+            // Loop through the nodes instances list
+            for (let i = 0; i < data.length; i++) {
+                nodesInstances.push(data[i]);
+            }
+            return nodesInstances;
+        } catch (error) {
+            console.error('Error fetching nodes instances:', error);
+            return [];
+        }
+    }
+
+
+    // populate the label-select dropdown
+    var labelSelect = document.getElementById("label-select");
+    labels.forEach(label => {
+        var option = document.createElement("option");
+        option.text = label;
+        labelSelect.add(option);
+    });
+
+    // populate the property-select dropdown when the label changes
+    labelSelect.addEventListener("change", async function () {
+        var selectedLabel = labelSelect.value;
+        var propertySelect = document.getElementById("property-select");
+        propertySelect.innerHTML = "";
+
+        // get the properties of the selected label
+        var properties = await getDataProperties(selectedLabel);
+
+        // populate the property-select dropdown with fetched properties
+        for (let i = 0; i < properties.length; i++) {
+            var option = document.createElement("option");
+            option.text = properties[i].name;
+            propertySelect.add(option);
+        }
+    });
+
+    // populate the table with the search results
+    var tableBody = document.getElementById("table-body");
+
+    // add event listener to label-select
+    labelSelect.addEventListener("change", async function () {
+        var selectedLabel = labelSelect.value;
+
+        // fetch all nodes instances of the selected label
+        var nodesInstances = await getNodesInstances(selectedLabel);
+        console.log(nodesInstances);
+
+        // clear the table body
+        tableBody.innerHTML = "";
+
+        // populate the table with the fetched nodes instances
+        for (let i = 0; i < nodesInstances.length; i++) {
+            var row = tableBody.insertRow();
+            var cell1 = row.insertCell(0);
+            var cell2 = row.insertCell(1);
+            var cell3 = row.insertCell(2);
+            var cell4 = row.insertCell(3);
+            var cell5 = row.insertCell(4);
+
+            cell1.innerHTML = `<input type="checkbox" class="checkbox">`;
+            cell2.innerHTML = selectedLabel;
+            cell3.innerHTML = nodesInstances[i].persons_UID;
+            cell4.innerHTML = `<button class="import-btn">Import</button>`;
+            cell5.innerHTML = `<button class="details-btn">Details</button>`;
+        }
+
+    });
+
+
+
+
     // Initialize the network and allNodes variables
     var network;
     var allNodes;
@@ -80,6 +198,8 @@
                 hover: true,
             },
         };
+
+        // Create a network with currentNodes and currentEdges
         var data = { nodes: nodesDataset, edges: edgesDataset };
         network = new vis.Network(container, data, options);
 
@@ -106,19 +226,13 @@
         network.on("blurEdge", function () {
             changeCursor("default");
         });
-        network.on("dragStart", function () {
-            changeCursor("grabbing");
-        });
-        network.on("dragging", function () {
-            changeCursor("grabbing");
-        });
-        network.on("dragEnd", function () {
-            changeCursor("grab");
-        });
 
         // get a JSON object
         allNodes = nodesDataset.get({ returnType: "Object" });
         network.on("click", neighbourhoodHighlight);
+
+        // // Add a new node when the user clicks on the canvas
+        // network.on("click", addNode);
         network.on("doubleClick", function (params) {
             // Ensure the node was clicked
             if (params.nodes.length > 0) {
@@ -227,6 +341,35 @@
         }
         nodesDataset.update(updateArray);
     }
+
+
+    // When the user clicks on the canvas, add a new node
+    // function addNode(params) {
+
+    //     // check if the user click on a blank space
+    //     if (params.nodes.length === 0 && params.edges.length === 0) {
+
+    //         // get the coordinates of the click
+    //         var x = params.pointer.canvas.x;
+    //         var y = params.pointer.canvas.y;
+
+    //         // create a new node
+    //         var data = {
+    //             id: "Random Node",
+    //             label: "New Node",
+    //             x: x,
+    //             y: y,
+    //             color: "rgba(200,200,200,0.5)",
+    //         };
+
+    //         // add the new node to the nodes dataset
+    //         nodesDataset.add(data);
+
+    //         // update the network
+    //         network.redraw();
+    //     }
+
+    // }
     redrawAll();
 </script>
 {% endblock %}
