@@ -16,6 +16,9 @@ class SOCKG:
         
         # Get the ontology graph
         self.get_ontology_graph()
+
+        # Initialize the nodes set
+        self.nodes = set()
         
     
     # Get the ontology graph
@@ -69,7 +72,14 @@ class SOCKG:
 
     # Get a list of all nodes in the ontology graph
     def get_nodes(self):
-        return list(self.adjacency_list.keys())
+        
+        if len(self.nodes) == 0:
+            self.nodes = set()
+            for start_node in self.adjacency_list:
+                self.nodes.add(start_node)
+                for _, end_node in self.adjacency_list[start_node]:
+                    self.nodes.add(end_node)
+        return list(self.nodes)
 
     # Get a list of all edges in the ontology graph
     def get_edges(self):
