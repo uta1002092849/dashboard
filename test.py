@@ -2,11 +2,12 @@ from api.sockg import SOCKG
 
 sockg = SOCKG("https://frink.apps.renci.org/sockg/sparql")
 
-node_types = sockg.get_nodes()
-# print(node_types)
+print(f"Classes: {sockg.get_all_classes()}")
 
-hm = sockg.getVisJsGraph()
+print(f"Relations: {sockg.get_all_edges()}")
 
-for node in hm['nodes']:
-    print(node)
-    break
+print(f"Instances count of 'WeatherObservation': {sockg.get_instance_count('WeatherObservation')}")
+
+print(f"Data properties of 'WeatherObservation': {sockg.get_data_properties_from_class('WeatherObservation')}")
+
+print(f"Object properties of 'WeatherObservation': {sockg.get_object_properties_from_class('WeatherObservation')}")

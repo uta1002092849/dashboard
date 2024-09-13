@@ -27,7 +27,7 @@ def contact():
 @app.route('/get_node_attributes/<node_id>', methods=['GET'])
 def get_node_attributes_route(node_id):
     sockg = SOCKG(SPARQL_ENDPOINT)
-    attributes = sockg.get_node_attributes(node_id)
+    attributes = sockg.get_data_property(node_id)
     return (attributes)
 
 @app.route('/get_node_instances/<node_type>', methods=['GET'])
