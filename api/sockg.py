@@ -330,3 +330,69 @@ class SOCKG:
         except Exception as e:
             print(f"Error retrieving attributes for node {node_uri}: {e}")
         return class_type
+    
+    def _get_uri_through_connection(self, startURI, connectionType):
+        """
+        Given an start node's uri, return end node uri that connected with start through an relation.
+        :param startURI: A string representing the start node's uri
+        :param connectionType: A string representing the relation between start and end node
+        :return: A list of strings containing the end node URIs for the given start node. For example, "neo4j://graph.individuals#1234"
+        """
+        uri = []
+        
+        # assume uri is in the form "neo4j://graph.individuals#<node_id>"
+        endURIs =  """
+            PREFIX onto: <http://www.semanticweb.org/zzy/ontologies/2024/0/soil-carbon-ontology/>
+            SELECT ?endURI
+            WHERE {{
+                # Forward direction
+                {{ <{startURI}> onto:{connection} ?endURI. }}
+                # Reverse direction
+                UNION
+                {{ ?endURI onto:{connection} <{startURI}>. }}
+            }}
+        """.format(startURI=startURI, connection=connectionType)
+
+
+        # Run the query
+        try:
+            self.sparql.setQuery(endURIs)
+            results = self.sparql.queryAndConvert()
+            for result in results["results"]["bindings"]:
+                uri.append(result["endURI"]["value"])
+        except Exception as e:
+            print(f"Error retrieving end node for start node {startURI}: {e}")
+        return uri
+    
+    def get_all_experimentalUnit_for_field(self, field_instance):
+        """
+        Given a field instance, return all experimental unit instances for that field instance.
+        :param field_instance: A string representing the field instance to get experimental unit instances for
+        :return: A list of strings containing the experimental unit URIs for the given field instance. For example, "neo4j://graph.individuals#1234"
+        """
+        return self._get_uri_through_connection(field_instance, "locatedInField")
+    
+    def get_all_soilPhysicalSample_for_expUnit(self, expUnit_instance):
+        """
+        Given an experimental unit instance, return all soil physical sample instances for that experimental unit instance.
+        :param expUnit_instance: A string representing the experimental unit instance to get soil physical sample instances for
+        :return: A list of strings containing the soil physical sample URIs for the given experimental unit instance. For example, "neo4j://graph.individuals#1234"
+        """
+        return self._get_uri_through_connection(expUnit_instance, "hasPhySample")
+    
+    def get_all_soilChemicalSample_for_expUnit(self, expUnit_instance):
+        """
+        Given an experimental unit instance, return all soil chemical sample instances for that experimental unit instance.
+        :param expUnit_instance: A string representing the experimental unit instance to get soil chemical sample instances for
+        :return: A list of strings containing the soil chemical sample URIs for the given experimental unit instance. For example, "neo4j://graph.individuals#1234"
+        """
+        return self._get_uri_through_connection(expUnit_instance, "hasChemSample")
+    
+    def get_all_soilBiologicalSample_for_expUnit(self, expUnit_instance):
+        """
+        Given an experimental unit instance, return all soil biological sample instances for that experimental unit instance.
+        :param expUnit_instance: A string representing the experimental unit instance to get soil biological sample instances for
+        :return: A list of strings containing the soil biological sample URIs for the given experimental unit instance. For example, "neo4j://graph.individuals#1234"
+        """
+        return self._get_uri_through_connection(expUnit_instance, "hasBioSample")
+    

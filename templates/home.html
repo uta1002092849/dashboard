@@ -4,72 +4,16 @@
 
 {% block content %}
 
-<style>
-    .modal-body {
-        display: none;
-        position: fixed;
-        z-index: 1000;
-        left: 50%;
-        top: 50%;
-        transform: translate(-50%, -50%);
-        width: 80%;
-        max-width: 600px;
-        background-color: white;
-        padding: 20px;
-        border-radius: 5px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    }
-
-    .modal-backdrop {
-        display: none;
-        position: fixed;
-        z-index: 999;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-    }
-
-    .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 10px;
-    }
-
-    .modal-title {
-        margin: 0;
-    }
-
-    .input-group {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 10px;
-    }
-
-    .table {
-        margin-bottom: 0;
-    }
-
-    .btn-toolbar {
-        margin-bottom: 10px;
-        align-items: center;
-
-    }
-</style>
-
-<!-- Title-->
 <div class="container-fluid">
 
+    <!-- Page title -->
     <div class="row">
         <div class="col-md-12">
             <h1 class="text-center">SOC-KG ORION</h1>
         </div>
     </div>
 
-
-    <!-- Tool bar with various buttons like add node, clear canvas, etc. -->
+    <!-- Button group -->
     <div class="container-fluid">
         <div class="row">
             <div class="col-md-12">
@@ -84,15 +28,16 @@
 
 
 
-    <!-- Container for graph and table -->
+    <!-- Network canvas -->
     <div style="display: flex; height: 80vh;">
         <div id="mynetwork" style="flex-grow: 1; border: 5px solid lightgray;"></div>
     </div>
 
-    <!-- Add this div for the modal backdrop -->
+    <!-- Modal backdrop -->
     <div class="modal-backdrop" id="modal-backdrop"></div>
 
-    <div class="modal-body" id="search-modal" style="width: 1000px; height:800px;">
+    <!-- Modal -->
+    <div class="modal-body" id="search-modal" style="width: 1000px; height:750px;">
         <div class="container-fluid">
             <div class="modal-header">
                 <h3 class="modal-title">Search Nodes</h3>
@@ -111,8 +56,7 @@
                     <!-- Options will be added dynamically -->
                 </select>
 
-
-                <input type="text" class="form-control" placeholder="Filter key word">
+                <input type="text" class="form-control" placeholder="Filter keyword">
             </div>
 
             <br>
@@ -133,269 +77,185 @@
             </div>
         </div>
     </div>
+</div>
 
 
-    <script type="text/javascript">
-        function redrawAll(nodeList, edgeList) {
-            const container = document.getElementById("mynetwork");
-            const options = {
-                autoResize: true,
-                height: "100%",
-                width: "100%",
-                locale: "en",
-                nodes: {
-                    scaling: { min: 10, max: 30 },
-                    font: { size: 12, face: "Tahoma" },
-                    borderWidth: 3,
-                    shape: "circle",
-                },
-                edges: {
-                    width: 0.15,
-                    color: { inherit: "from" },
-                    smooth: { type: "continuous" },
-                },
-                physics: {
-                    barnesHut: {
-                        gravitationalConstant: -7000,
-                        centralGravity: 0,
-                        springLength: 120,
-                    },
-                    minVelocity: 0.75
-                },
-                interaction: {
-                    tooltipDelay: 200,
-                    hideEdgesOnDrag: true,
-                    hideEdgesOnZoom: true,
-                    hover: true,
-                    hoverConnectedEdges: true,
-                    keyboard: {
-                        enabled: true,
-                        speed: { x: 10, y: 10, zoom: 0.02 },
-                        bindToWindow: true,
-                    },
-                    navigationButtons: true,
-                },
-                layout: {
-                    randomSeed: '0.6220599341091104:1726193513099',
-                    improvedLayout: true,
-                },
-            };
+<script type="text/javascript">
 
-            if (!nodeList || !edgeList) {
-                nodeList = new vis.DataSet({});
-                edgeList = new vis.DataSet({});
+    // Get nodes and edges data from Flask
+    const allNodesJson = {{ node_list | tojson | safe }};
+    const allEdgesJson = {{ edge_list | tojson | safe }};
+
+    // DOM element references
+    const modal = document.getElementById("search-modal");
+    const modalBackdrop = document.getElementById("modal-backdrop");
+    const openModalBtn = document.getElementById("open-modal-btn");
+    const closeModalBtn = document.getElementById("close-modal-btn");
+    const clearCanvasBtn = document.getElementById("Clear-canas-btn");
+    const loadOntologyBtn = document.getElementById("load-ontology-btn");
+    const labelSelect = document.getElementById("label-select");
+    const propertySelect = document.getElementById("property-select");
+    const tableBody = document.getElementById("table-body");
+
+    // Event listeners
+    loadOntologyBtn.addEventListener('click', loadOntology);
+    openModalBtn.addEventListener('click', openModal);
+    closeModalBtn.addEventListener('click', closeModal);
+    clearCanvasBtn.addEventListener('click', clearCanvas);
+    labelSelect.addEventListener('change', handleLabelChange);
+
+    // Close modal when clicking outside
+    window.addEventListener('click', (event) => {
+        if (event.target === modalBackdrop) {
+            closeModal();
+        }
+    });
+
+    // Populate label select
+    const labelSelectList = {{ node_list | tojson | safe }}.map(node => node.label);
+    populateSelect(labelSelect, labelSelectList);
+
+    let network;
+
+    function loadOntology(nodes, edges) {
+        nodes = new vis.DataSet(allNodesJson);
+        edges = new vis.DataSet(allEdgesJson);
+        redrawAll(nodes, edges);
+    }
+
+    function openModal() {
+        modal.style.display = "block";
+        modalBackdrop.style.display = "block";
+    }
+
+    function closeModal() {
+        modal.style.display = "none";
+        modalBackdrop.style.display = "none";
+    }
+
+    function clearCanvas() {
+        redrawAll(null, null);
+    }
+
+    async function handleLabelChange() {
+        const selectedLabel = labelSelect.value;
+        await populatePropertySelect(selectedLabel);
+        await populateNodeInstances(selectedLabel);
+    }
+
+    async function getDataProperties(label) {
+        try {
+            const response = await fetch(`/get_data_properties_from_class?class_type=${encodeURIComponent(label)}`);
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status}`);
             }
-            const data = { nodes: nodeList, edges: edgeList };
-            network = new vis.Network(container, data, options);
-
-            const networkCanvas = container.getElementsByTagName("canvas")[0];
-            networkCanvas.style.cursor = "default";
-
-            network.on("hoverNode", () => networkCanvas.style.cursor = "grab");
-            network.on("blurNode", () => networkCanvas.style.cursor = "default");
-            network.on("hoverEdge", () => networkCanvas.style.cursor = "grab");
-            network.on("blurEdge", () => networkCanvas.style.cursor = "default");
-
-            allNodes = nodeList.get({ returnType: "Object" });
-            network.on("click", neighbourhoodHighlight);
-            network.on("doubleClick", handleNodeDoubleClick);
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Error fetching node instances:', error);
+            return [];
         }
+    }
 
-        async function handleNodeDoubleClick(params) {
-            if (params.nodes.length > 0) {
-                const nodeId = params.nodes[0];
-                document.getElementById("node-type").innerText = `Node Type: ${nodeId}`;
-
-                try {
-                    const data = await fetch(`/get_node_attributes/${nodeId}`).then(response => response.json());
-                    document.getElementById("node-attributes").innerHTML = data.map(attr => `
-                <tr>
-                    <td>${attr.name}</td>
-                    <td>${attr.data_type}</td>
-                    <td><a href="${attr.reference_link}" target="_blank">Link</a></td>
-                </tr>
-            `).join('');
-                } catch (error) {
-                    console.error('Error fetching node attributes:', error);
-                }
+    async function getNodesInstances(classType, limit = 10, offset = 0) {
+        try {
+            const response = await fetch(`/get_node_instance_from_class?class_type=${encodeURIComponent(classType)}&limit=${limit}&offset=${offset}`);
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status}`);
             }
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Error fetching node instances:', error);
+            return [];
         }
+    }
 
-        function neighbourhoodHighlight(params) {
-            if (params.nodes.length > 0) {
-                highlightActive = true;
-                const selectedNode = params.nodes[0];
-                const degrees = 2;
+    function populateSelect(selectElement, options) {
+        selectElement.innerHTML = options.map(option => `<option value="${option}">${option}</option>`).join('');
+    }
 
-                // Reset all nodes
-                Object.values(allNodes).forEach(node => {
-                    node.color = "rgba(200,200,200,0.5)";
-                    if (node.hiddenLabel === undefined) {
-                        node.hiddenLabel = node.label;
-                        node.label = undefined;
-                    }
-                });
+    async function populatePropertySelect(selectedLabel) {
+        const properties = await getDataProperties(selectedLabel);
+        populateSelect(propertySelect, properties.map(prop => prop.name));
+    }
 
-                // Highlight connected nodes
-                const connectedNodes = network.getConnectedNodes(selectedNode);
-                const allConnectedNodes = new Set(connectedNodes);
+    async function populateNodeInstances(selectedLabel) {
+        tableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;"><img src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGQ5ZjJ4azlrMzBuaTJ0Mnd2NHBoOGtpa3o3eXpvdHcwOHM3NG5haiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/TTMXOwinNDNv4qnm3Q/giphy.webp" alt="Loading..." width="50"></td></tr>';
 
-                for (let i = 1; i < degrees; i++) {
-                    connectedNodes.forEach(nodeId => {
-                        network.getConnectedNodes(nodeId).forEach(connectedNodeId => {
-                            allConnectedNodes.add(connectedNodeId);
-                        });
-                    });
-                }
-
-                allConnectedNodes.forEach(nodeId => {
-                    allNodes[nodeId].color = "rgba(150,150,150,0.75)";
-                    if (allNodes[nodeId].hiddenLabel !== undefined) {
-                        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
-                        allNodes[nodeId].hiddenLabel = undefined;
-                    }
-                });
-
-                connectedNodes.forEach(nodeId => {
-                    allNodes[nodeId].color = undefined;
-                    if (allNodes[nodeId].hiddenLabel !== undefined) {
-                        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
-                        allNodes[nodeId].hiddenLabel = undefined;
-                    }
-                });
-
-                // Highlight selected node
-                allNodes[selectedNode].color = undefined;
-                if (allNodes[selectedNode].hiddenLabel !== undefined) {
-                    allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
-                    allNodes[selectedNode].hiddenLabel = undefined;
-                }
-            } else if (highlightActive) {
-                // Reset all nodes if no node is selected
-                Object.values(allNodes).forEach(node => {
-                    node.color = undefined;
-                    if (node.hiddenLabel !== undefined) {
-                        node.label = node.hiddenLabel;
-                        node.hiddenLabel = undefined;
-                    }
-                });
-                highlightActive = false;
-            }
-
-            // Update nodes
-            NodeList.update(Object.values(allNodes));
-        }
-
-        // Get nodes and edges data from Flask
-        const allNodesJson = {{ node_list | tojson | safe }};
-        const allEdgesJson = {{ edge_list | tojson | safe }};
-
-        // DOM element references
-        const modal = document.getElementById("search-modal");
-        const modalBackdrop = document.getElementById("modal-backdrop");
-        const openModalBtn = document.getElementById("open-modal-btn");
-        const closeModalBtn = document.getElementById("close-modal-btn");
-        const clearCanvasBtn = document.getElementById("Clear-canas-btn");
-        const loadOntologyBtn = document.getElementById("load-ontology-btn");
-        const labelSelect = document.getElementById("label-select");
-        const propertySelect = document.getElementById("property-select");
-        const tableBody = document.getElementById("table-body");
-
-        // Event listeners
-        loadOntologyBtn.addEventListener('click', loadOntology);
-        openModalBtn.addEventListener('click', openModal);
-        closeModalBtn.addEventListener('click', closeModal);
-        clearCanvasBtn.addEventListener('click', clearCanvas);
-        labelSelect.addEventListener('change', handleLabelChange);
-
-        // Close modal when clicking outside
-        window.addEventListener('click', (event) => {
-            if (event.target === modalBackdrop) {
-                closeModal();
-            }
-        });
-
-        // Populate label select
-        const labels = {{ node_list | tojson | safe }}.map(node => node.label);
-        populateSelect(labelSelect, labels);
-
-        // Network variables
-        let network;
-        let highlightActive = false;
-        // let nodesDataset = new vis.DataSet({{ node_list | tojson | safe }});
-        // let edgesDataset = new vis.DataSet({{ edge_list | tojson | safe }});
-
-        // Functions
-        function loadOntology(nodes, edges) {
-            nodes = new vis.DataSet(allNodesJson);
-            edges = new vis.DataSet(allEdgesJson);
-            redrawAll(nodes, edges);
-        }
-
-        function openModal() {
-            modal.style.display = "block";
-            modalBackdrop.style.display = "block";
-        }
-
-        function closeModal() {
-            modal.style.display = "none";
-            modalBackdrop.style.display = "none";
-        }
-
-        function clearCanvas() {
-            redrawAll(null, null);
-        }
-
-        async function handleLabelChange() {
-            const selectedLabel = labelSelect.value;
-            await populatePropertySelect(selectedLabel);
-            await populateNodeInstances(selectedLabel);
-        }
-
-        async function getDataProperties(label) {
-            try {
-                const response = await fetch(`/get_node_attributes/${label}`);
-                const data = await response.json();
-                return data.map(({ name, data_type, reference_link }) => ({ name, dataType: data_type, referenceLink: reference_link }));
-            } catch (error) {
-                console.error('Error fetching label properties:', error);
-                return [];
-            }
-        }
-
-        async function getNodesInstances(label) {
-            try {
-                const response = await fetch(`/get_node_instances/${label}`);
-                return await response.json();
-            } catch (error) {
-                console.error('Error fetching nodes instances:', error);
-                return [];
-            }
-        }
-
-        function populateSelect(selectElement, options) {
-            selectElement.innerHTML = options.map(option => `<option value="${option}">${option}</option>`).join('');
-        }
-
-        async function populatePropertySelect(selectedLabel) {
-            const properties = await getDataProperties(selectedLabel);
-            populateSelect(propertySelect, properties.map(prop => prop.name));
-        }
-
-        async function populateNodeInstances(selectedLabel) {
-            tableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;"><img src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGQ5ZjJ4azlrMzBuaTJ0Mnd2NHBoOGtpa3o3eXpvdHcwOHM3NG5haiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/TTMXOwinNDNv4qnm3Q/giphy.webp" alt="Loading..." width="50"></td></tr>';
-
-            const nodesInstances = await getNodesInstances(selectedLabel);
-            tableBody.innerHTML = nodesInstances.map(instance => `
+        const nodesInstances = await getNodesInstances(selectedLabel);
+        tableBody.innerHTML = nodesInstances.map(instance => `
         <tr>
             <td>${selectedLabel}</td>
             <td>${instance}</td>
             <td><button class="import-btn">Import</button></td>
         </tr>
     `).join('');
-        }
+    }
 
-        // Initialize the network
-        redrawAll(null, null);
-    </script>
-    {% endblock %}
+    // Initialize the network
+    redrawAll(null, null);
+    function redrawAll(nodeList, edgeList) {
+        const container = document.getElementById("mynetwork");
+        const options = {
+            autoResize: true,
+            height: "100%",
+            width: "100%",
+            locale: "en",
+            nodes: {
+                scaling: { min: 10, max: 30 },
+                font: { size: 12, face: "Tahoma" },
+                borderWidth: 3,
+                shape: "circle",
+            },
+            edges: {
+                width: 0.15,
+                color: { inherit: "from" },
+                smooth: { type: "continuous" },
+            },
+            physics: {
+                barnesHut: {
+                    gravitationalConstant: -7000,
+                    centralGravity: 0,
+                    springLength: 120,
+                },
+                minVelocity: 0.75
+            },
+            interaction: {
+                tooltipDelay: 200,
+                hideEdgesOnDrag: true,
+                hideEdgesOnZoom: true,
+                hover: true,
+                hoverConnectedEdges: true,
+                keyboard: {
+                    enabled: true,
+                    speed: { x: 10, y: 10, zoom: 0.02 },
+                    bindToWindow: true,
+                },
+                navigationButtons: true,
+            },
+            layout: {
+                randomSeed: '0.6220599341091104:1726193513099',
+                improvedLayout: true,
+            },
+        };
+
+        if (!nodeList || !edgeList) {
+            nodeList = new vis.DataSet({});
+            edgeList = new vis.DataSet({});
+        }
+        const data = { nodes: nodeList, edges: edgeList };
+        network = new vis.Network(container, data, options);
+
+        const networkCanvas = container.getElementsByTagName("canvas")[0];
+        networkCanvas.style.cursor = "default";
+
+        network.on("hoverNode", () => networkCanvas.style.cursor = "grab");
+        network.on("blurNode", () => networkCanvas.style.cursor = "default");
+        network.on("hoverEdge", () => networkCanvas.style.cursor = "grab");
+        network.on("blurEdge", () => networkCanvas.style.cursor = "default");
+
+        allNodes = nodeList.get({ returnType: "Object" });
+    }
+</script>
+{% endblock %}
