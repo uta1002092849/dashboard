@@ -245,7 +245,7 @@
     }
 
     async function populateNodeInstances(selectedLabel, selectedProperty) {
-        tableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;"><img src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGQ5ZjJ4azlrMzBuaTJ0Mnd2NHBoOGtpa3o3eXpvdHcwOHM3NG5haiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/TTMXOwinNDNv4qnm3Q/giphy.webp" alt="Loading..." width="50"></td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;"><img src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGQ5ZjJ4azlrMzBuaTJ0Mnd2NHBoOGtpa3o3eXpvdHcwOHM3NG5haiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/TTMXOwinNDNv4qnm3Q/giphy.webp" alt="Loading..." width="50"></td></tr>';
 
         const offset = (currentPage - 1) * itemsPerPage;
         const nodesInstances = await getNodesInstances(selectedLabel, selectedProperty, itemsPerPage, offset);
