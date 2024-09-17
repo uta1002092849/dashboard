@@ -37,50 +37,76 @@
     <div class="modal-backdrop" id="modal-backdrop"></div>
 
     <!-- Modal -->
-    <div class="modal-body" id="search-modal" style="width: 1000px; height:750px;">
+    <div class="modal-body" id="search-modal">
         <div class="container-fluid">
             <div class="modal-header">
-                <h3 class="modal-title">Search Nodes</h3>
-                <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close" id="close-modal-btn">
+                <h3 class="modal-title">Search and Add Nodes</h3>
+                <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal" aria-label="Close"
+                    id="close-modal-btn">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
 
             <div class="input-group">
-                <select id="label-select" class="form-select" aria-label="Default select example">
+                <select id="label-select" class="form-select aria-label=" Default select example">
                     <option selected>Select label</option>
                     <!-- Options will be added dynamically -->
                 </select>
                 <select id="property-select" class="form-select" aria-label="Default select example">
                     <option selected>Select property</option>
-                    <!-- Options will be added dynamically -->
                 </select>
 
                 <input type="text" class="form-control" placeholder="Filter keyword">
             </div>
 
-            <br>
+            <hr>
 
-            <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+            <div class="table-responsive">
                 <table class="table table-striped table-light table-bordered table-hover">
-                    <thead class="thead-light">
+                    <thead id="table-head" class="thead-light">
                         <tr>
+                            <th scope="col">#</th>
                             <th scope="col">Labels</th>
-                            <th scope="col">Name</th>
+                            <th scope="col">instance_uri</th>
                             <th scope="col">Import</th>
                         </tr>
                     </thead>
                     <tbody id="table-body">
-                        <!-- Rows will be dynamically added here -->
+                        <!-- Default empty rows -->
+                        <tr>
+                            <td colspan="4" rowspan="10" style="text-align: center;">No data</td>
+                        </tr>
                     </tbody>
                 </table>
+
+                <!-- Pagination controls -->
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center mt-3">
+                        <li class="page-item">
+                            <button class="page-link" id="prev-page">Previous</button>
+                        </li>
+                        <li class="page-item">
+                            <span class="page-link" id="current-page">Page 1</span>
+                        </li>
+                        <li class="page-item">
+                            <button class="page-link" id="next-page">Next</button>
+                        </li>
+                    </ul>
+                </nav>
             </div>
+
         </div>
     </div>
 </div>
 
 
 <script type="text/javascript">
+
+    // pagination variables
+    let currentPage = 1;
+    const itemsPerPage = 10;
+    let totalItems = 0;
+
 
     // Get nodes and edges data from Flask
     const allNodesJson = {{ node_list | tojson | safe }};
@@ -96,6 +122,10 @@
     const labelSelect = document.getElementById("label-select");
     const propertySelect = document.getElementById("property-select");
     const tableBody = document.getElementById("table-body");
+    const prevPageBtn = document.getElementById("prev-page");
+    const nextPageBtn = document.getElementById("next-page");
+    const currentPageSpan = document.getElementById("current-page");
+    const tableHead = document.getElementById("table-head");
 
     // Event listeners
     loadOntologyBtn.addEventListener('click', loadOntology);
@@ -103,6 +133,11 @@
     closeModalBtn.addEventListener('click', closeModal);
     clearCanvasBtn.addEventListener('click', clearCanvas);
     labelSelect.addEventListener('change', handleLabelChange);
+    propertySelect.addEventListener('change', handlePropertyChange);
+
+    // Event listeners for pagination
+    prevPageBtn.addEventListener('click', () => changePage(-1));
+    nextPageBtn.addEventListener('click', () => changePage(1));
 
     // Close modal when clicking outside
     window.addEventListener('click', (event) => {
@@ -140,7 +175,31 @@
     async function handleLabelChange() {
         const selectedLabel = labelSelect.value;
         await populatePropertySelect(selectedLabel);
-        await populateNodeInstances(selectedLabel);
+        currentPage = 1;
+        await getTotalItemCount(selectedLabel);
+        await populateNodeInstances(selectedLabel, null);
+    }
+
+    async function handlePropertyChange() {
+        const selectedProperty = propertySelect.value;
+        // replace table head with selected property
+        tableHead.innerHTML = `<tr><th scope="col">#</th><th scope="col">Labels</th><th scope="col">${selectedProperty}</th><th scope="col">Import</th></tr>`;
+        await populateNodeInstances(labelSelect.value, propertySelect.value);
+    }
+
+    async function getTotalItemCount(classType) {
+        try {
+            const response = await fetch(`/get_instance_count?class_type=${encodeURIComponent(classType)}`);
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status}`);
+            }
+            const data = await response.json();
+            totalItems = data || 0;
+
+        } catch (error) {
+            console.error('Error fetching instance count:', error);
+            totalItems = 0;
+        }
     }
 
     async function getDataProperties(label) {
@@ -157,9 +216,9 @@
         }
     }
 
-    async function getNodesInstances(classType, limit = 10, offset = 0) {
+    async function getNodesInstances(classType, selectedProperty, limit = itemsPerPage, offset = 0) {
         try {
-            const response = await fetch(`/get_node_instance_from_class?class_type=${encodeURIComponent(classType)}&limit=${limit}&offset=${offset}`);
+            const response = await fetch(`/get_node_instance_from_class?class_type=${encodeURIComponent(classType)}&property_name=${encodeURIComponent(selectedProperty)}&limit=${limit}&offset=${offset}`);
             if (!response.ok) {
                 throw new Error(`Server error: ${response.status}`);
             }
@@ -172,6 +231,11 @@
     }
 
     function populateSelect(selectElement, options) {
+        // check if select element is property select
+        if (selectElement === propertySelect) {
+            // add default option
+            options.unshift('instance_uri');
+        }
         selectElement.innerHTML = options.map(option => `<option value="${option}">${option}</option>`).join('');
     }
 
@@ -180,17 +244,44 @@
         populateSelect(propertySelect, properties.map(prop => prop.name));
     }
 
-    async function populateNodeInstances(selectedLabel) {
+    async function populateNodeInstances(selectedLabel, selectedProperty) {
         tableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;"><img src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGQ5ZjJ4azlrMzBuaTJ0Mnd2NHBoOGtpa3o3eXpvdHcwOHM3NG5haiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/TTMXOwinNDNv4qnm3Q/giphy.webp" alt="Loading..." width="50"></td></tr>';
 
-        const nodesInstances = await getNodesInstances(selectedLabel);
+        const offset = (currentPage - 1) * itemsPerPage;
+        const nodesInstances = await getNodesInstances(selectedLabel, selectedProperty, itemsPerPage, offset);
+
+        // replace instance with 'No data' if empty
+        nodesInstances.forEach((instance, index) => {
+            if (instance === 'NaN') {
+                nodesInstances[index] = 'No data';
+            }
+        });
+        var index = 0;
         tableBody.innerHTML = nodesInstances.map(instance => `
-        <tr>
-            <td>${selectedLabel}</td>
-            <td>${instance}</td>
-            <td><button class="import-btn">Import</button></td>
-        </tr>
-    `).join('');
+            <tr>
+                <td>${++index + (currentPage - 1) * itemsPerPage}</td>
+                <td>${selectedLabel}</td>
+                <td>${instance}</td>
+                <td><button class="btn btn-outline-primary">Import</button></td>
+            </tr>
+        `).join('');
+
+        updatePaginationControls();
+    }
+
+    function updatePaginationControls() {
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        currentPageSpan.textContent = `Page ${currentPage} of ${totalPages}`;
+        prevPageBtn.disabled = currentPage === 1;
+        nextPageBtn.disabled = currentPage === totalPages;
+    }
+
+    async function changePage(direction) {
+        const newPage = currentPage + direction;
+        if (newPage > 0 && newPage <= Math.ceil(totalItems / itemsPerPage)) {
+            currentPage = newPage;
+            await populateNodeInstances(labelSelect.value, propertySelect.value);
+        }
     }
 
     // Initialize the network
