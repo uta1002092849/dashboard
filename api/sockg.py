@@ -191,7 +191,7 @@ class SOCKG:
                 edges.append({"from": start_node, "to": end_node, "title": relation, "arrows": "to"})
         return {"nodes": nodes, "edges": edges}
     
-    def get_node_instance_from_class(self, class_type, limit=10, offset=0):
+    def get_node_instance_from_class(self, class_type, property_name, limit=10, offset=0):
         """
         Given a class type, limit, and offset, return all instances for that class type. This is typically used to get all instances for a given class type.
         :param class_type: A string representing the class type to get instances for
@@ -208,25 +208,33 @@ class SOCKG:
                 PREFIX onto: <http://www.semanticweb.org/zzy/ontologies/2024/0/soil-carbon-ontology/>
 
                 SELECT 
-                    ?instance_uri
+                    ?instance_uri ?value
                 WHERE {{
+                    
+                    BIND("Not available" AS ?default_value)
+                    
                     ?instance_uri rdf:type onto:{class_type} .
+                    OPTIONAL {{?instance_uri onto:{property} ?propertyValue .}}
+                    
+                    bind(coalesce(?propertyValue, ?default_value) as ?value)
                 }}
                 LIMIT {limit}
                 OFFSET {offset}
-            """.format(class_type=class_type, limit=limit, offset=offset)
-
+            """.format(class_type=class_type, property=property_name, limit=limit, offset=offset)
+            node_uris = []
             # Run the query
             try:
                 self.sparql.setQuery(get_attributes_query)
                 results = self.sparql.queryAndConvert()
-                node_uris = []
                 for result in results["results"]["bindings"]:
-                    uri = result["instance_uri"]["value"]
+                    if property_name == "null" or property_name == "instance_uri":
+                        uri = result["instance_uri"]["value"]
+                    else:
+                        uri = result["value"]["value"]
                     node_uris.append(uri)
+                return node_uris
             except Exception as e:
                 print(f"Error retrieving attributes for node {class_type}: {e}")
-        return node_uris
     
     def get_data_property_from_instance(self, node_uri):
         """
