@@ -221,18 +221,33 @@ class SOCKG:
                 LIMIT {limit}
                 OFFSET {offset}
             """.format(class_type=class_type, property=property_name, limit=limit, offset=offset)
-            node_uris = []
             # Run the query
             try:
                 self.sparql.setQuery(get_attributes_query)
                 results = self.sparql.queryAndConvert()
+
+                # return result in ajax friendly format
+                res = {}
+                counter = offset + 1
+
+                # get total count of instances
+                res["total"] = self.get_instance_count(class_type)
+                res['totalNotFiltered'] = res["total"]
+                res['rows'] = []
                 for result in results["results"]["bindings"]:
                     if property_name == "null" or property_name == "instance_uri":
                         uri = result["instance_uri"]["value"]
                     else:
                         uri = result["value"]["value"]
-                    node_uris.append(uri)
-                return node_uris
+                    row = {
+                        "id": counter,
+                        "uri": uri,
+                        "class": class_type,
+                        "property": property_name
+                    }
+                    res['rows'].append(row)
+                    counter += 1
+                return res
             except Exception as e:
                 print(f"Error retrieving attributes for node {class_type}: {e}")
     
