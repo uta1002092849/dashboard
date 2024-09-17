@@ -24,19 +24,6 @@ def about():
 def contact():
     return render_template('contact.html')
 
-@app.route('/get_node_attributes/<node_id>', methods=['GET'])
-def get_node_attributes_route(node_id):
-    sockg = SOCKG(SPARQL_ENDPOINT)
-    attributes = sockg.get_data_property(node_id)
-    return (attributes)
-
-@app.route('/get_node_instances/<node_type>', methods=['GET'])
-def get_node_instance_route(node_type):
-    sockg = SOCKG(SPARQL_ENDPOINT)
-    instances = sockg.get_node_instance(node_type)
-    return (instances)
-
-
 # start of REST API endpoints
 # Route to get all classes
 @app.route('/get_all_classes', methods=['GET'])
@@ -61,7 +48,6 @@ def get_instance_count():
 @app.route('/get_data_properties_from_class', methods=['GET'])
 def get_data_properties_from_class():
     class_type = request.args.get('class_type')
-    print(class_type)
     result = sockg.get_data_properties_from_class(class_type)
     return jsonify(result)
 
@@ -69,9 +55,10 @@ def get_data_properties_from_class():
 @app.route('/get_node_instance_from_class', methods=['GET'])
 def get_node_instance_from_class():
     class_type = request.args.get('class_type')
+    property_name = request.args.get('property_name')
     limit = int(request.args.get('limit', 10))
     offset = int(request.args.get('offset', 0))
-    result = sockg.get_node_instance_from_class(class_type, limit, offset)
+    result = sockg.get_node_instance_from_class(class_type, property_name, limit, offset)
     return jsonify(result)
 
 # Route to get data properties for a node instance
