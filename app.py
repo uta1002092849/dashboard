@@ -1,10 +1,13 @@
 from flask import Flask, render_template, jsonify, request
 from api.sockg import SOCKG
+from flask_cors import CORS, cross_origin
 
 # Need to be replaced with environment variable
 SPARQL_ENDPOINT = "https://frink.apps.renci.org/sockg/sparql"
 app = Flask(__name__)
 sockg = SOCKG(SPARQL_ENDPOINT)
+cors = CORS(app)
+app.config['CORS_HEADERS'] = 'Content-Type'
 
 @app.route('/')
 def home():
@@ -59,6 +62,14 @@ def get_node_instance_from_class():
     limit = int(request.args.get('limit', 10))
     offset = int(request.args.get('offset', 0))
     result = sockg.get_node_instance_from_class(class_type, property_name, limit, offset)
+    return jsonify(result)
+
+@app.route('/get_node_instance_from_class_v2', methods=['GET'])
+def get_node_instance_from_class_v2():
+    class_type = request.args.get('class_type')
+    limit = int(request.args.get('limit', 10))
+    offset = int(request.args.get('offset', 0))
+    result = sockg.get_node_instance_from_class_v2(class_type, limit, offset)
     return jsonify(result)
 
 # Route to get data properties for a node instance

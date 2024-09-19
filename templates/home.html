@@ -4,6 +4,8 @@
 
 {% block content %}
 
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-table@1.23.2/dist/bootstrap-table.min.css">
+
 <div class="container-fluid">
 
     <!-- Page title -->
@@ -61,46 +63,102 @@
 
             <hr>
 
-            <div class="table-responsive">
-                <table class="table table-striped table-light table-bordered table-hover">
-                    <thead id="table-head" class="thead-light">
-                        <tr>
-                            <th scope="col">#</th>
-                            <th scope="col">Labels</th>
-                            <th scope="col">instance_uri</th>
-                            <th scope="col">Import</th>
-                        </tr>
-                    </thead>
-                    <tbody id="table-body">
-                        <!-- Default empty rows -->
-                        <tr>
-                            <td colspan="4" rowspan="10" style="text-align: center;">No data</td>
-                        </tr>
-                    </tbody>
-                </table>
+            <table class="table table-striped table-light table-bordered table-hover" data-click-to-select="true"
+                data-click-to-select="true">
+                <thead id="table-head" class="thead-light">
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Labels</th>
+                        <th scope="col" data-field="instance_uri" data-sortable="true">instance_uri</th>
+                        <th scope="col">Import</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <!-- Default empty rows -->
+                    <tr>
+                        <td colspan="4" rowspan="10" style="text-align: center;">No data</td>
+                    </tr>
+                </tbody>
+            </table>
 
-                <!-- Pagination controls -->
-                <nav aria-label="Page navigation">
-                    <ul class="pagination justify-content-center mt-3">
-                        <li class="page-item">
-                            <button class="page-link" id="prev-page">Previous</button>
-                        </li>
-                        <li class="page-item">
-                            <span class="page-link" id="current-page">Page 1</span>
-                        </li>
-                        <li class="page-item">
-                            <button class="page-link" id="next-page">Next</button>
-                        </li>
-                    </ul>
-                </nav>
-            </div>
-
+            <!-- Pagination controls -->
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center mt-3">
+                    <li class="page-item">
+                        <button class="page-link" id="prev-page">Previous</button>
+                    </li>
+                    <li class="page-item">
+                        <span class="page-link" id="current-page">Page 1 of 1</span>
+                    </li>
+                    <li class="page-item">
+                        <button class="page-link" id="next-page">Next</button>
+                    </li>
+                    <li class="page-item">
+                        <input type="number" class="form-control" id="page-input" min="1" style="width: 70px;">
+                    </li>
+                    <li class="page-item">
+                        <button class="page-link" id="go-to-page">Go</button>
+                    </li>
+                </ul>
+            </nav>
         </div>
     </div>
+
+    <table id="table" data-url="http://127.0.01:5000/get_node_instance_from_class_v2">
+        <thead>
+            <tr>
+                <th data-field="id">ID</th>
+                <th data-field="uri">Item Name</th>
+                <th data-field="atmosphericNitrogenDeposition">Item Price</th>
+            </tr>
+        </thead>
+    </table>
+
+
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/jquery/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap-table@1.23.2/dist/bootstrap-table.min.js"></script>
 
 <script type="text/javascript">
+
+    var $table = $('#table');
+    var currentClassType = "WeatherObservation"; // Default class type
+
+    function initializeTable(classType) {
+        currentClassType = classType;
+        $table.bootstrapTable('destroy'); // Destroy existing table instance
+        $table.bootstrapTable({
+            paginationLoadMore: true,
+            queryParams: function (params) {
+                params.limit = itemsPerPage;
+                params.offset = (currentPage - 1) * itemsPerPage;
+                params.class_type = currentClassType;
+                return params;
+            },
+            responseHandler: function (res) {
+                return res;
+            },
+            // Add any other table options here
+        });
+    }
+
+    // Initial table setup
+    $(function () {
+        initializeTable(currentClassType);
+    });
+
+    // Function to update table when class type changes
+    function updateTableClassType(newClassType) {
+        initializeTable(newClassType);
+    }
+
+    // Event listener for class type change
+    // Assuming you have a select element with id 'classTypeSelect'
+    $('#classTypeSelect').on('change', function () {
+        var newClassType = $(this).val();
+        updateTableClassType(newClassType);
+    });
 
     // pagination variables
     let currentPage = 1;
@@ -126,6 +184,11 @@
     const nextPageBtn = document.getElementById("next-page");
     const currentPageSpan = document.getElementById("current-page");
     const tableHead = document.getElementById("table-head");
+
+    const pageInput = document.getElementById("page-input");
+    const goToPageBtn = document.getElementById("go-to-page");
+    // Add these event listeners
+    goToPageBtn.addEventListener('click', goToInputPage);
 
     // Event listeners
     loadOntologyBtn.addEventListener('click', loadOntology);
@@ -178,6 +241,7 @@
         currentPage = 1;
         await getTotalItemCount(selectedLabel);
         await populateNodeInstances(selectedLabel, null);
+        updateTableClassType(selectedLabel);
     }
 
     async function handlePropertyChange() {
@@ -276,11 +340,29 @@
         nextPageBtn.disabled = currentPage === totalPages;
     }
 
+    // Modify the existing changePage function
     async function changePage(direction) {
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
         const newPage = currentPage + direction;
-        if (newPage > 0 && newPage <= Math.ceil(totalItems / itemsPerPage)) {
+        if (newPage > 0 && newPage <= totalPages) {
             currentPage = newPage;
             await populateNodeInstances(labelSelect.value, propertySelect.value);
+        }
+    }
+
+    // Add these new functions
+    async function goToPage(pageNumber) {
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        if (pageNumber > 0 && pageNumber <= totalPages) {
+            currentPage = pageNumber;
+            await populateNodeInstances(labelSelect.value, propertySelect.value);
+        }
+    }
+
+    function goToInputPage() {
+        const pageNumber = parseInt(pageInput.value);
+        if (!isNaN(pageNumber)) {
+            goToPage(pageNumber);
         }
     }
 

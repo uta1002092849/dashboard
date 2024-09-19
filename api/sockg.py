@@ -236,6 +236,71 @@ class SOCKG:
             except Exception as e:
                 print(f"Error retrieving attributes for node {class_type}: {e}")
     
+    def get_node_instance_from_class_v2(self, class_type, limit=10, offset=0):
+        """
+        Given a class type, limit, and offset, return all instances for that class type. This is typically used to get all instances for a given class type.
+        :param class_type: A string representing the class type to get instances for
+        :param limit: An integer representing the number of instances to return, default is 10
+        :param offset: An integer representing the starting point to return instances, default is 0. This is useful for pagination, where the next set of instances will be offset + limit
+        :return: A list of strings containing the instance URIs for the given class type. For example, "neo4j://graph.individuals#1234"
+        """
+
+        if class_type not in self.get_all_classes():
+            print(f"Class {class_type} not found in the ontology graph")
+        else:
+            get_attributes_query = """
+                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+                PREFIX onto: <http://www.semanticweb.org/zzy/ontologies/2024/0/soil-carbon-ontology/>
+                PREFIX owl: <http://www.w3.org/2002/07/owl#>
+
+                SELECT 
+                    ?instance_uri
+                    (STRAFTER(STR(?property_uri), "/soil-carbon-ontology/") AS ?property)
+                    ?value
+                WHERE {{
+
+                    BIND("Not available" AS ?default_value)
+
+                    ?instance_uri rdf:type onto:{class_type} .
+                    ?instance_uri ?property_uri ?value .
+                    ?property_uri rdf:type owl:DatatypeProperty .
+
+                }}
+                LIMIT {limit}
+                OFFSET {offset}
+            """.format(class_type=class_type, limit=limit, offset=offset)
+            # Run the query
+            try:
+                self.sparql.setQuery(get_attributes_query)
+                results = self.sparql.queryAndConvert()
+
+                # return result in ajax friendly format
+                res = {}
+
+                # get total count of instances
+                res["total"] = self.get_instance_count(class_type)
+                res['totalNotFiltered'] = res["total"]
+                res['rows'] = []
+
+                id = (offset + 1)
+
+                hm = collections.defaultdict(dict)
+                for result in results["results"]["bindings"]:
+                    uri = result["instance_uri"]["value"]
+                    property = result["property"]["value"]
+                    value = result["value"]["value"]
+                    hm[uri][property] = value
+                rows = []
+                for uri in hm:
+                    hm[uri]["id"] = id
+                    id += 1
+                    hm[uri]["uri"] = uri
+                    rows.append(hm[uri])
+                res['rows'] = rows
+                return res
+            except Exception as e:
+                print(f"Error retrieving attributes for node {class_type}: {e}")
+    
     def get_data_property_from_instance(self, node_uri):
         """
         Given a node instance, return all data properties for that node instance. Data properties are typically numerical values associated with the instance, excluding the relations to other instances (these relations will be considered as object porperty).
