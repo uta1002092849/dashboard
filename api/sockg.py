@@ -191,7 +191,7 @@ class SOCKG:
                 edges.append({"from": start_node, "to": end_node, "title": relation, "arrows": "to"})
         return {"nodes": nodes, "edges": edges}
     
-    def get_node_instance_from_class(self, class_type, property_name, limit=10, offset=0):
+    def get_node_instance_from_class(self, class_type, limit=10, offset=0):
         """
         Given a class type, limit, and offset, return all instances for that class type. This is typically used to get all instances for a given class type.
         :param class_type: A string representing the class type to get instances for
@@ -206,21 +206,24 @@ class SOCKG:
             get_attributes_query = """
                 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
                 PREFIX onto: <http://www.semanticweb.org/zzy/ontologies/2024/0/soil-carbon-ontology/>
+                PREFIX owl: <http://www.w3.org/2002/07/owl#>
 
                 SELECT 
-                    ?instance_uri ?value
+                    ?instance_uri
+                    (STRAFTER(STR(?property_uri), "/soil-carbon-ontology/") AS ?property)
+                    ?value
                 WHERE {{
-                    
+
                     BIND("Not available" AS ?default_value)
-                    
+
                     ?instance_uri rdf:type onto:{class_type} .
-                    OPTIONAL {{?instance_uri onto:{property} ?propertyValue .}}
-                    
-                    bind(coalesce(?propertyValue, ?default_value) as ?value)
+                    ?instance_uri ?property_uri ?value .
+                    ?property_uri rdf:type owl:DatatypeProperty .
+
                 }}
                 LIMIT {limit}
                 OFFSET {offset}
-            """.format(class_type=class_type, property=property_name, limit=limit, offset=offset)
+            """.format(class_type=class_type, limit=limit, offset=offset)
             # Run the query
             try:
                 self.sparql.setQuery(get_attributes_query)
@@ -228,25 +231,27 @@ class SOCKG:
 
                 # return result in ajax friendly format
                 res = {}
-                counter = offset + 1
 
                 # get total count of instances
                 res["total"] = self.get_instance_count(class_type)
                 res['totalNotFiltered'] = res["total"]
                 res['rows'] = []
+
+                id = (offset + 1)
+
+                hm = collections.defaultdict(dict)
                 for result in results["results"]["bindings"]:
-                    if property_name == "null" or property_name == "instance_uri":
-                        uri = result["instance_uri"]["value"]
-                    else:
-                        uri = result["value"]["value"]
-                    row = {
-                        "id": counter,
-                        "uri": uri,
-                        "class": class_type,
-                        "property": property_name
-                    }
-                    res['rows'].append(row)
-                    counter += 1
+                    uri = result["instance_uri"]["value"]
+                    property = result["property"]["value"]
+                    value = result["value"]["value"]
+                    hm[uri][property] = value
+                rows = []
+                for uri in hm:
+                    hm[uri]["id"] = id
+                    id += 1
+                    hm[uri]["uri"] = uri
+                    rows.append(hm[uri])
+                res['rows'] = rows
                 return res
             except Exception as e:
                 print(f"Error retrieving attributes for node {class_type}: {e}")
