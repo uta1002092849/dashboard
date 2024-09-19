@@ -191,7 +191,52 @@ class SOCKG:
                 edges.append({"from": start_node, "to": end_node, "title": relation, "arrows": "to"})
         return {"nodes": nodes, "edges": edges}
     
-    def get_node_instance_from_class(self, class_type, limit=10, offset=0):
+    def get_node_instance_from_class(self, class_type, property_name, limit=10, offset=0):
+        """
+        Given a class type, limit, and offset, return all instances for that class type. This is typically used to get all instances for a given class type.
+        :param class_type: A string representing the class type to get instances for
+        :param limit: An integer representing the number of instances to return, default is 10
+        :param offset: An integer representing the starting point to return instances, default is 0. This is useful for pagination, where the next set of instances will be offset + limit
+        :return: A list of strings containing the instance URIs for the given class type. For example, "neo4j://graph.individuals#1234"
+        """
+
+        if class_type not in self.get_all_classes():
+            print(f"Class {class_type} not found in the ontology graph")
+        else:
+            get_attributes_query = """
+                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+                PREFIX onto: <http://www.semanticweb.org/zzy/ontologies/2024/0/soil-carbon-ontology/>
+
+                SELECT 
+                    ?instance_uri ?value
+                WHERE {{
+                    
+                    BIND("Not available" AS ?default_value)
+                    
+                    ?instance_uri rdf:type onto:{class_type} .
+                    OPTIONAL {{?instance_uri onto:{property} ?propertyValue .}}
+                    
+                    bind(coalesce(?propertyValue, ?default_value) as ?value)
+                }}
+                LIMIT {limit}
+                OFFSET {offset}
+            """.format(class_type=class_type, property=property_name, limit=limit, offset=offset)
+            node_uris = []
+            # Run the query
+            try:
+                self.sparql.setQuery(get_attributes_query)
+                results = self.sparql.queryAndConvert()
+                for result in results["results"]["bindings"]:
+                    if property_name == "null" or property_name == "instance_uri":
+                        uri = result["instance_uri"]["value"]
+                    else:
+                        uri = result["value"]["value"]
+                    node_uris.append(uri)
+                return node_uris
+            except Exception as e:
+                print(f"Error retrieving attributes for node {class_type}: {e}")
+    
+    def get_node_instance_from_class_v2(self, class_type, limit=10, offset=0):
         """
         Given a class type, limit, and offset, return all instances for that class type. This is typically used to get all instances for a given class type.
         :param class_type: A string representing the class type to get instances for

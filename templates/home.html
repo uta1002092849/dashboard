@@ -28,6 +28,8 @@
         </div>
     </div>
 
+
+
     <!-- Network canvas -->
     <div style="display: flex; height: 80vh;">
         <div id="mynetwork" style="flex-grow: 1; border: 5px solid lightgray;"></div>
@@ -37,52 +39,132 @@
     <div class="modal-backdrop" id="modal-backdrop"></div>
 
     <!-- Modal -->
+    <div class="modal-body" id="search-modal">
+        <div class="container-fluid">
+            <div class="modal-header">
+                <h3 class="modal-title">Search and Add Nodes</h3>
+                <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal" aria-label="Close"
+                    id="close-modal-btn">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
 
-    <div class="container-fluid search-modal" id="search-modal">
-        <div class="modal-header">
-            <h3 class="modal-title">Search and Add Nodes</h3>
-            <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal" aria-label="Close"
-                id="close-modal-btn">
-                <span aria-hidden="true">&times;</span>
-            </button>
+            <div class="input-group">
+                <select id="label-select" class="form-select aria-label=" Default select example">
+                    <option selected>Select label</option>
+                    <!-- Options will be added dynamically -->
+                </select>
+                <select id="property-select" class="form-select" aria-label="Default select example">
+                    <option selected>Select property</option>
+                </select>
+
+                <input type="text" class="form-control" placeholder="Filter keyword">
+            </div>
+
+            <hr>
+
+            <table class="table table-striped table-light table-bordered table-hover" data-click-to-select="true"
+                data-click-to-select="true">
+                <thead id="table-head" class="thead-light">
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Labels</th>
+                        <th scope="col" data-field="instance_uri" data-sortable="true">instance_uri</th>
+                        <th scope="col">Import</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <!-- Default empty rows -->
+                    <tr>
+                        <td colspan="4" rowspan="10" style="text-align: center;">No data</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Pagination controls -->
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center mt-3">
+                    <li class="page-item">
+                        <button class="page-link" id="prev-page">Previous</button>
+                    </li>
+                    <li class="page-item">
+                        <span class="page-link" id="current-page">Page 1 of 1</span>
+                    </li>
+                    <li class="page-item">
+                        <button class="page-link" id="next-page">Next</button>
+                    </li>
+                    <li class="page-item">
+                        <input type="number" class="form-control" id="page-input" min="1" style="width: 70px;">
+                    </li>
+                    <li class="page-item">
+                        <button class="page-link" id="go-to-page">Go</button>
+                    </li>
+                </ul>
+            </nav>
         </div>
-
-        <div class="input-group">
-            <select id="label-select" class="form-select aria-label=" Default select example">
-                <option selected>Select label</option>
-                <!-- Options will be added dynamically -->
-            </select>
-            <select id="property-select" class="form-select" aria-label="Default select example">
-                <option selected>Select property</option>
-            </select>
-
-            <input type="text" class="form-control" placeholder="Filter keyword">
-        </div>
-
-        <hr>
-
-        <table class="table table-striped table-light table-bordered table-hover" id="table" data-show-columns="true"
-            data-pagination="true" data-search="true" data-checkbox-header="false" data-click-to-select="true"
-            data-show-fullscreen="true" data-show-search-button="true" data-buttons-align="left"
-            data-toggle="table" data-url="http://localhost:5000/get_node_instance_from_class?search&class_type=WeatherObservation" data-side-pagination="server">
-            <thead id="table-head">
-                <tr>
-                    <th data-field="state" data-checkbox="true"></th>
-                    <th data-field="id" data-sortable="true">ID</th>
-                    <th data-field="class" data-sortable="true">Class</th>
-                    <th data-field="property" data-sortable="true">Propery</th>
-                    <th data-field="uri" data-sortable="true">URI</th>
-                </tr>
-            </thead>
-        </table>
-
     </div>
+
+    <table id="table" data-url="http://127.0.01:5000/get_node_instance_from_class_v2">
+        <thead>
+            <tr>
+                <th data-field="id">ID</th>
+                <th data-field="uri">Item Name</th>
+                <th data-field="atmosphericNitrogenDeposition">Item Price</th>
+            </tr>
+        </thead>
+    </table>
+
+
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/jquery/dist/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap-table@1.23.2/dist/bootstrap-table.min.js"></script>
 
 <script type="text/javascript">
+
+    var $table = $('#table');
+    var currentClassType = "WeatherObservation"; // Default class type
+
+    function initializeTable(classType) {
+        currentClassType = classType;
+        $table.bootstrapTable('destroy'); // Destroy existing table instance
+        $table.bootstrapTable({
+            paginationLoadMore: true,
+            queryParams: function (params) {
+                params.limit = itemsPerPage;
+                params.offset = (currentPage - 1) * itemsPerPage;
+                params.class_type = currentClassType;
+                return params;
+            },
+            responseHandler: function (res) {
+                return res;
+            },
+            // Add any other table options here
+        });
+    }
+
+    // Initial table setup
+    $(function () {
+        initializeTable(currentClassType);
+    });
+
+    // Function to update table when class type changes
+    function updateTableClassType(newClassType) {
+        initializeTable(newClassType);
+    }
+
+    // Event listener for class type change
+    // Assuming you have a select element with id 'classTypeSelect'
+    $('#classTypeSelect').on('change', function () {
+        var newClassType = $(this).val();
+        updateTableClassType(newClassType);
+    });
+
+    // pagination variables
+    let currentPage = 1;
+    const itemsPerPage = 10;
+    let totalItems = 0;
+
 
     // Get nodes and edges data from Flask
     const allNodesJson = {{ node_list | tojson | safe }};
@@ -98,8 +180,15 @@
     const labelSelect = document.getElementById("label-select");
     const propertySelect = document.getElementById("property-select");
     const tableBody = document.getElementById("table-body");
+    const prevPageBtn = document.getElementById("prev-page");
+    const nextPageBtn = document.getElementById("next-page");
     const currentPageSpan = document.getElementById("current-page");
     const tableHead = document.getElementById("table-head");
+
+    const pageInput = document.getElementById("page-input");
+    const goToPageBtn = document.getElementById("go-to-page");
+    // Add these event listeners
+    goToPageBtn.addEventListener('click', goToInputPage);
 
     // Event listeners
     loadOntologyBtn.addEventListener('click', loadOntology);
@@ -109,28 +198,16 @@
     labelSelect.addEventListener('change', handleLabelChange);
     propertySelect.addEventListener('change', handlePropertyChange);
 
+    // Event listeners for pagination
+    prevPageBtn.addEventListener('click', () => changePage(-1));
+    nextPageBtn.addEventListener('click', () => changePage(1));
+
     // Close modal when clicking outside
     window.addEventListener('click', (event) => {
         if (event.target === modalBackdrop) {
             closeModal();
         }
     });
-
-    // $(function updateTable() {
-    //     var rows = [];
-    //     $('#table').bootstrapTable({
-    //         paginationLoadMore: true,
-    //         queryParams(params) {
-    //             params.limit = 10
-    //             params.offset = rows.length
-    //             params.class_type = labelSelect.value
-    //             return params
-    //         },
-    //         responseHandler(res) {
-    //             return res
-    //         }
-    //     })
-    // });
 
     // Populate label select
     const labelSelectList = {{ node_list | tojson | safe }}.map(node => node.label);
@@ -161,19 +238,15 @@
     async function handleLabelChange() {
         const selectedLabel = labelSelect.value;
         await populatePropertySelect(selectedLabel);
-        await updateTable(selectedLabel);
-    }
-
-    async function updateTable(class_type) {
-
-        // change table uri
-        $('#table').bootstrapTable('refreshOptions', {
-            url: `http://localhost:5000/get_node_instance_from_class?class_type=${class_type}`
-        });
+        currentPage = 1;
+        await getTotalItemCount(selectedLabel);
+        await populateNodeInstances(selectedLabel, null);
+        updateTableClassType(selectedLabel);
     }
 
     async function handlePropertyChange() {
         const selectedProperty = propertySelect.value;
+        // replace table head with selected property
         tableHead.innerHTML = `<tr><th scope="col">#</th><th scope="col">Labels</th><th scope="col">${selectedProperty}</th><th scope="col">Import</th></tr>`;
         await populateNodeInstances(labelSelect.value, propertySelect.value);
     }
@@ -235,6 +308,63 @@
         populateSelect(propertySelect, properties.map(prop => prop.name));
     }
 
+    async function populateNodeInstances(selectedLabel, selectedProperty) {
+        tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;"><img src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGQ5ZjJ4azlrMzBuaTJ0Mnd2NHBoOGtpa3o3eXpvdHcwOHM3NG5haiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/TTMXOwinNDNv4qnm3Q/giphy.webp" alt="Loading..." width="50"></td></tr>';
+
+        const offset = (currentPage - 1) * itemsPerPage;
+        const nodesInstances = await getNodesInstances(selectedLabel, selectedProperty, itemsPerPage, offset);
+
+        // replace instance with 'No data' if empty
+        nodesInstances.forEach((instance, index) => {
+            if (instance === 'NaN') {
+                nodesInstances[index] = 'No data';
+            }
+        });
+        var index = 0;
+        tableBody.innerHTML = nodesInstances.map(instance => `
+            <tr>
+                <td>${++index + (currentPage - 1) * itemsPerPage}</td>
+                <td>${selectedLabel}</td>
+                <td>${instance}</td>
+                <td><button class="btn btn-outline-primary">Import</button></td>
+            </tr>
+        `).join('');
+
+        updatePaginationControls();
+    }
+
+    function updatePaginationControls() {
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        currentPageSpan.textContent = `Page ${currentPage} of ${totalPages}`;
+        prevPageBtn.disabled = currentPage === 1;
+        nextPageBtn.disabled = currentPage === totalPages;
+    }
+
+    // Modify the existing changePage function
+    async function changePage(direction) {
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        const newPage = currentPage + direction;
+        if (newPage > 0 && newPage <= totalPages) {
+            currentPage = newPage;
+            await populateNodeInstances(labelSelect.value, propertySelect.value);
+        }
+    }
+
+    // Add these new functions
+    async function goToPage(pageNumber) {
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        if (pageNumber > 0 && pageNumber <= totalPages) {
+            currentPage = pageNumber;
+            await populateNodeInstances(labelSelect.value, propertySelect.value);
+        }
+    }
+
+    function goToInputPage() {
+        const pageNumber = parseInt(pageInput.value);
+        if (!isNaN(pageNumber)) {
+            goToPage(pageNumber);
+        }
+    }
 
     // Initialize the network
     redrawAll(null, null);
