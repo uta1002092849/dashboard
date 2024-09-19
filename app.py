@@ -67,9 +67,10 @@ def get_node_instance_from_class():
 @app.route('/get_node_instance_from_class_v2', methods=['GET'])
 def get_node_instance_from_class_v2():
     class_type = request.args.get('class_type')
+    property_type = request.args.get('property_name')
     limit = int(request.args.get('limit', 10))
     offset = int(request.args.get('offset', 0))
-    result = sockg.get_node_instance_from_class_v2(class_type, limit, offset)
+    result = sockg.get_node_instance_from_class_v2(class_type, property_type, limit, offset)
     return jsonify(result)
 
 # Route to get data properties for a node instance

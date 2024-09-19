@@ -236,7 +236,7 @@ class SOCKG:
             except Exception as e:
                 print(f"Error retrieving attributes for node {class_type}: {e}")
     
-    def get_node_instance_from_class_v2(self, class_type, limit=10, offset=0):
+    def get_node_instance_from_class_v2(self, class_type, property_type, limit=10, offset=0):
         """
         Given a class type, limit, and offset, return all instances for that class type. This is typically used to get all instances for a given class type.
         :param class_type: A string representing the class type to get instances for
@@ -255,20 +255,20 @@ class SOCKG:
 
                 SELECT 
                     ?instance_uri
-                    (STRAFTER(STR(?property_uri), "/soil-carbon-ontology/") AS ?property)
                     ?value
                 WHERE {{
 
                     BIND("Not available" AS ?default_value)
 
                     ?instance_uri rdf:type onto:{class_type} .
-                    ?instance_uri ?property_uri ?value .
-                    ?property_uri rdf:type owl:DatatypeProperty .
+                    OPTIONAL {{?instance_uri onto:{property_type} ?propertyValue .}}
+
+                    bind(coalesce(?propertyValue, ?default_value) as ?value)
 
                 }}
                 LIMIT {limit}
                 OFFSET {offset}
-            """.format(class_type=class_type, limit=limit, offset=offset)
+            """.format(class_type=class_type, property_type=property_type, limit=limit, offset=offset)
             # Run the query
             try:
                 self.sparql.setQuery(get_attributes_query)
@@ -284,19 +284,13 @@ class SOCKG:
 
                 id = (offset + 1)
 
-                hm = collections.defaultdict(dict)
                 for result in results["results"]["bindings"]:
-                    uri = result["instance_uri"]["value"]
-                    property = result["property"]["value"]
-                    value = result["value"]["value"]
-                    hm[uri][property] = value
-                rows = []
-                for uri in hm:
-                    hm[uri]["id"] = id
+                    row = {}
+                    row["id"] = id
                     id += 1
-                    hm[uri]["uri"] = uri
-                    rows.append(hm[uri])
-                res['rows'] = rows
+                    row["uri"] = result["instance_uri"]["value"]
+                    row["property_value"] = result["value"]["value"]
+                    res['rows'].append(row)
                 return res
             except Exception as e:
                 print(f"Error retrieving attributes for node {class_type}: {e}")
@@ -321,7 +315,6 @@ class SOCKG:
                     ?attri rdf:type owl:DatatypeProperty .
                 }}
         """.format(node_uri=node_uri)
-
         # Run the query
         try:
             self.sparql.setQuery(get_attributes_query)
