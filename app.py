@@ -54,6 +54,13 @@ def get_data_properties_from_class():
     result = sockg.get_data_properties_from_class(class_type)
     return jsonify(result)
 
+# Route to get data properties from a class type
+@app.route('/get_data_properties_from_class_v2', methods=['GET'])
+def get_data_properties_from_class_v2():
+    class_type = request.args.get('class_type')
+    result = sockg.get_data_properties_from_class_v2(class_type)
+    return jsonify(result)
+
 # Route to get node instances from a class with pagination (limit and offset)
 @app.route('/get_node_instance_from_class', methods=['GET'])
 def get_node_instance_from_class():
@@ -63,6 +70,7 @@ def get_node_instance_from_class():
     offset = int(request.args.get('offset', 0))
     result = sockg.get_node_instance_from_class(class_type, property_name, limit, offset)
     return jsonify(result)
+
 
 @app.route('/get_node_instance_from_class_v2', methods=['GET'])
 def get_node_instance_from_class_v2():
