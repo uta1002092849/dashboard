@@ -124,6 +124,18 @@ class SOCKG:
                 print(f"Error retrieving instance count for node {class_type}: {e}")
         return total_count
     
+    def get_data_properties_from_class_v2(self, class_type):
+        
+        # get a single instance of the class
+        result = self.get_node_instance_from_class_v2(class_type, "instance_uri", 1, 0)
+        rows = result['rows']
+        node_uri = rows[0]['uri']
+        
+        # get all data properties for the instance
+        result = self.get_data_property_from_instance(node_uri)
+        data_attributes = list(result.keys())
+        return data_attributes
+    
     def get_data_properties_from_class(self, class_type):
         """
         Given a class type, return all data properties for that class type. This is typically not used as numerical data is commonly in triple with the instance. Include for completeness.
@@ -289,7 +301,7 @@ class SOCKG:
                     row["id"] = id
                     id += 1
                     row["uri"] = result["instance_uri"]["value"]
-                    row["property_value"] = result["value"]["value"]
+                    row["property_value"] = (result["value"]["value"] if str(result["value"]["value"]) != "NaN" else "Not available")
                     res['rows'].append(row)
                 return res
             except Exception as e:
@@ -326,7 +338,7 @@ class SOCKG:
             # A list of tuples containing the attribute name, data type, and reference link
             for result in results["results"]["bindings"]:
                 data_attribute = result["dataAttribute"]["value"]
-                value = result["value"]["value"]
+                value = (result["value"]["value"] if str(result["value"]["value"]) != "NaN" else "Not available")
                 attribute_val[data_attribute] = value
             return attribute_val
         except Exception as e:
