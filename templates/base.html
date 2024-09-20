@@ -34,6 +34,81 @@
             bottom: 0;
             width: 100%;
         }
+
+        /* Modal Custom Size */
+        .modal-lg {
+            max-width: 90%;
+            /* Make modal larger */
+        }
+
+        /* Modal Header Styling */
+        .modal-header {
+            background-color: #3723ec;
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .modal-title {
+            margin: 0;
+            text-align: center;
+            width: 100%;
+            padding: 10px;
+        }
+
+        /* Input Section Spacing */
+        .form-label {
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Table Styling */
+        .table-striped tbody tr:nth-of-type(odd) {
+            background-color: rgba(0, 123, 255, 0.1);
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: rgba(0, 123, 255, 0.2);
+        }
+
+        /* Table Head Styling */
+        .table-dark th {
+            background-color: #606870b2;
+            /* Dark gray for header */
+            color: #fff;
+        }
+
+        /* Fixed number of rows */
+        #table tbody tr {
+            height: 50px;
+        }
+
+        #table tbody {
+            display: block;
+            height: 500px;
+            overflow-y: auto;
+        }
+
+        #table thead,
+        #table tbody tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        /* Modal Footer */
+        .modal-footer {
+            padding: 0.75rem;
+            background-color: #f8f9fa;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            /* Slightly darker secondary button */
+            border-color: #6c757d;
+        }
     </style>
 </head>
 

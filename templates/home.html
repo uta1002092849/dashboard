@@ -70,7 +70,8 @@
                         class="table table-striped table-hover align-middle" data-side-pagination="server"
                         data-pagination="true" data-search="true" data-click-to-select="true" data-show-columns="true"
                         data-show-refresh="true" data-search-highlight="true" data-detail-view="true"
-                        data-detail-view-by-click="true" data-detail-view-icon="false">
+                        data-detail-view-by-click="true" data-detail-view-icon="false" data-search-accent-neutralise="true"
+                        data-search-align="left">
                         <thead class="table-dark">
                         </thead>
                         <tbody>
@@ -82,90 +83,11 @@
                 <!-- Modal Footer -->
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary">Export Selected Node</button>
+                    <button id="export_btn" type="button" class="btn btn-primary">Export Selected Node</button>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Custom Styling -->
-    <style>
-        /* Modal Custom Size */
-        .modal-lg {
-            max-width: 85%;
-            /* Make modal larger */
-        }
-
-        /* Modal Header Styling */
-        .modal-header {
-            background-color: #3723ec;
-            color: #fff;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .modal-title {
-            margin: 0;
-            text-align: center;
-            width: 100%;
-            padding: 10px;
-        }
-
-        /* Input Section Spacing */
-        .form-label {
-            font-weight: 500;
-            margin-bottom: 0.5rem;
-        }
-
-        /* Table Styling */
-        .table-striped tbody tr:nth-of-type(odd) {
-            background-color: rgba(0, 123, 255, 0.1);
-        }
-
-        .table-hover tbody tr:hover {
-            background-color: rgba(0, 123, 255, 0.2);
-        }
-
-        /* Table Head Styling */
-        .table-dark th {
-            background-color: #606870b2;
-            /* Dark gray for header */
-            color: #fff;
-        }
-
-        /* Fixed number of rows */
-        #table tbody tr {
-            height: 50px;
-        }
-
-        #table tbody {
-            display: block;
-            height: 500px;
-            overflow-y: auto;
-        }
-
-        #table thead,
-        #table tbody tr {
-            display: table;
-            width: 100%;
-            table-layout: fixed;
-        }
-
-        /* Modal Footer */
-        .modal-footer {
-            padding: 0.75rem;
-            background-color: #f8f9fa;
-        }
-
-        .btn-secondary {
-            background-color: #6c757d;
-            /* Slightly darker secondary button */
-            border-color: #6c757d;
-        }
-    </style>
-
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/jquery/dist/jquery.min.js"></script>
@@ -175,6 +97,7 @@
 
     // Reference to jQuery table
     var $table = $('#table');
+    var $export_btn = $('#export_btn');
 
     // Get nodes and edges data from Flask
     const allNodesJson = {{ node_list | tojson | safe }};
@@ -184,6 +107,9 @@
     $(function () {
         $('#modalTable').on('shown.bs.modal', function () {
             $table.bootstrapTable('resetView')
+        })
+        $export_btn.click(function () {
+            alert('getSelections: ' + JSON.stringify($table.bootstrapTable('getSelections')))
         })
     })
 
@@ -232,10 +158,11 @@
         // Destroy existing table instance
         $table.bootstrapTable('destroy');
         $table.bootstrapTable({
+
             // Change table header dynamically while keeping the format
             columns: [
                 { data_field: 'state', checkbox: true },
-                { field: 'id', title: 'ID', 'data-detail-formatter': 'detailFormatter' },
+                { field: 'id', title: 'ID', 'data-detail-formatter': 'detailFormatter'},
                 { field: 'uri', title: 'Node URI', 'data-detail-formatter': 'detailFormatter' },
                 { field: 'property_value', title: propertyType, 'data-detail-formatter': 'detailFormatter' },
             ],
